@@ -1,0 +1,58 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <math.h>
+
+double Noise(int x, int y){
+  int n = x + y * 57;
+  n = (n<<13) ^ n;
+  return (1.0 - ( ( n * ( n * n * 15731 + 789221) + 1376312589) & 0x7fffffff) / 1073741824.0);
+}
+
+double SmoothedNoise(double x, double y){
+  double corners = (Noise(x-1.0, y-1.0), Noise(x+1.0, y-1.0), Noise(x-1.0, y+1.0), Noise(x+1.0, y+1.0)) / 16.0;
+  double sides = (Noise(x-1.0, y), Noise(x+1.0, y), Noise(x, y+1.0), Noise(x, y+1.0)) / 16.0;
+  double center = Noise(x,y) / 4.0;
+  
+  return corners + sides + center;
+}
+
+double CosineInterpolate(double a, double b, double x){
+  double ft = x * 3.1415927;
+  double f = (1.0 - cos(ft)) * 0.5;
+  return a * (1.0 - f) + b * f;
+}
+
+double InterpolatedNoise(double x, double y){
+  int int_x =  x;
+  double frac_x = x - int_x;
+  int int_y = y;
+  double frac_y = y - int_y;
+  
+  double v1 = SmoothedNoise(int_x, int_y);
+  double v2 = SmoothedNoise(int_x + 1, int_y);
+  double v3 = SmoothedNoise(int_x, int_y + 1);
+  double v4 = SmoothedNoise(int_x + 1, int_y + 1);
+
+
+  double i1 = CosineInterpolate(v1, v2, frac_x);
+  double i2 = CosineInterpolate(v3, v4, frac_x);
+
+  return CosineInterpolate(i1, i2, frac_y);
+}
+
+double PerlinNoise(double x, double y, double persistence, double num_octaves){
+  double total = 0;
+
+  for(int i = 0; i < num_octaves; i++){
+    double frequency = pow(2.0, i);
+    double amplitude = pow(persistence, i);
+
+    total = total + InterpolatedNoise(x * frequency, y * frequency) * amplitude;
+  }
+  return total;
+}
+
+//int main(int argc, char** argv){
+//  printf("%f\n", PerlinNoise(atof(argv[1]), atof(argv[2]), atof(argv[3]), atof(argv[4])));
+//  return 0;
+//}
